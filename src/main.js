@@ -41,7 +41,7 @@ class RubiksCube3D {
 
     const aspect = this.container.clientWidth / this.container.clientHeight;
     this.camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
-    this.camera.position.set(3, 3, 4.5);
+    this.camera.position.set(3, 3, 5.5); // pulled back slightly for Webflow spacing
     this.camera.lookAt(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -62,7 +62,7 @@ class RubiksCube3D {
     this.createRubiksCube();
 
     // Smaller scale by default to prevent overflow
-    const scaleFactor = Math.min(this.container.clientWidth, this.container.clientHeight) / 480;
+    const scaleFactor = Math.min(this.container.clientWidth, this.container.clientHeight) / 500;
     this.cubeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
     this.createGround();
@@ -154,7 +154,6 @@ class RubiksCube3D {
   }
 
   createGround() {
-    // Ground is fully transparent
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(30, 30),
       new THREE.ShadowMaterial({ opacity: 0.0 })
@@ -209,9 +208,7 @@ class RubiksCube3D {
   setupIntersectionObserver() {
     this.observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          entry.isIntersecting ? this.start() : this.stop();
-        });
+        entries.forEach((entry) => (entry.isIntersecting ? this.start() : this.stop()));
       },
       { threshold: 0.1 }
     );
@@ -230,7 +227,7 @@ class RubiksCube3D {
     this.renderer.setSize(w, h);
 
     if (this.cubeGroup) {
-      const scaleFactor = Math.min(w, h) / 480;
+      const scaleFactor = Math.min(w, h) / 500;
       this.cubeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
     }
   }
@@ -274,13 +271,11 @@ class RubiksCube3D {
   }
 }
 
-// Initialize after DOM is loaded
+// ✅ Matches your actual Webflow div: id="rubic-3d"
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    new RubiksCube3D('services-rubic-3d');
-  });
+  document.addEventListener('DOMContentLoaded', () => new RubiksCube3D('rubic-3d'));
 } else {
-  new RubiksCube3D('services-rubic-3d');
+  new RubiksCube3D('rubic-3d');
 }
 
 export default RubiksCube3D;
