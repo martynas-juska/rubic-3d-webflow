@@ -8,13 +8,18 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "keywords": ["threejs", "vite", "3d"],
+  "keywords": [
+    "threejs",
+    "vite",
+    "3d"
+  ],
   "author": "Behind Axis",
   "license": "MIT",
   "dependencies": {
     "three": "^0.160.0"
   },
   "devDependencies": {
+    "terser": "^5.44.1",
     "vite": "^5.0.0"
   }
 }
