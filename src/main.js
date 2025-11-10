@@ -24,6 +24,7 @@ class RubiksCube3D {
     this.isDragging = false;
     this.previousMousePosition = { x: 0, y: 0 };
     this.autoRotate = true;
+    this.rotationVelocity = { x: 0, y: 0 }; // ← NEW for damping
 
     this.animate = this.animate.bind(this);
     this.handleResize = this.handleResize.bind(this);
@@ -41,7 +42,7 @@ class RubiksCube3D {
 
     const aspect = this.container.clientWidth / this.container.clientHeight;
     this.camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
-    this.camera.position.set(3, 3, 5.5); // pulled back slightly for Webflow spacing
+    this.camera.position.set(3, 3, 5.5);
     this.camera.lookAt(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -61,9 +62,9 @@ class RubiksCube3D {
     this.setupLights();
     this.createRubiksCube();
 
-    // Smaller scale by default to prevent overflow
+    // prevent oversized scale on big local viewports
     const scaleFactor = Math.min(this.container.clientWidth, this.container.clientHeight) / 500;
-    this.cubeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    this.cubeGroup.scale.setScalar(Math.min(scaleFactor, 1));
 
     this.createGround();
     this.setupEnvironment();
@@ -95,6 +96,14 @@ class RubiksCube3D {
     const accentLight2 = new THREE.PointLight(0xffa726, 2.5, 10);
     accentLight2.position.set(5, 2, 3);
     this.scene.add(accentLight2);
+
+    const topLight = new THREE.PointLight(0xdfe6e9, 1.0, 12);
+    topLight.position.set(0, 8, 0);
+    this.scene.add(topLight);
+
+    const frontLight = new THREE.DirectionalLight(0xb2bec3, 0.8);
+    frontLight.position.set(0, 2, 6);
+    this.scene.add(frontLight);
 
     this.movingLight = new THREE.PointLight(0x60a5fa, 2.0, 12);
     this.movingLight.position.set(4, 2, 0);
@@ -181,25 +190,33 @@ class RubiksCube3D {
       this.isDragging = true;
       this.autoRotate = false;
       this.previousMousePosition = { x: e.clientX, y: e.clientY };
+      this.rotationVelocity = { x: 0, y: 0 };
     });
 
     this.canvas.addEventListener('mousemove', (e) => {
       if (!this.isDragging) return;
-      this.targetRotationY += (e.clientX - this.previousMousePosition.x) * 0.005;
-      this.targetRotationX += (e.clientY - this.previousMousePosition.y) * 0.005;
+
+      const dx = e.clientX - this.previousMousePosition.x;
+      const dy = e.clientY - this.previousMousePosition.y;
+
+      this.targetRotationY += dx * 0.005;
+      this.targetRotationX += dy * 0.005;
+
+      this.rotationVelocity.x = dy * 0.005;
+      this.rotationVelocity.y = dx * 0.005;
+
       this.previousMousePosition = { x: e.clientX, y: e.clientY };
     });
 
-    this.canvas.addEventListener('mouseup', () => {
+    const endDrag = () => {
       this.isDragging = false;
       setTimeout(() => {
         if (!this.isDragging) this.autoRotate = true;
-      }, 1000);
-    });
+      }, 300);
+    };
 
-    this.canvas.addEventListener('mouseleave', () => {
-      this.isDragging = false;
-    });
+    this.canvas.addEventListener('mouseup', endDrag);
+    this.canvas.addEventListener('mouseleave', endDrag);
 
     window.addEventListener('resize', this.handleResize);
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
@@ -207,9 +224,7 @@ class RubiksCube3D {
 
   setupIntersectionObserver() {
     this.observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => (entry.isIntersecting ? this.start() : this.stop()));
-      },
+      (entries) => entries.forEach((entry) => (entry.isIntersecting ? this.start() : this.stop())),
       { threshold: 0.1 }
     );
 
@@ -225,11 +240,6 @@ class RubiksCube3D {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
-
-    if (this.cubeGroup) {
-      const scaleFactor = Math.min(w, h) / 500;
-      this.cubeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
-    }
   }
 
   handleVisibilityChange() {
@@ -239,21 +249,35 @@ class RubiksCube3D {
 
   animate() {
     if (!this.isVisible) return;
-
-    this.animationId = requestAnimationFrame(this.animate);
+    this.animationId = requestAnimationFrame(() => this.animate());
     this.time += 0.01;
 
     this.movingLight.position.x = Math.cos(this.time * 0.4) * 5;
     this.movingLight.position.z = Math.sin(this.time * 0.4) * 5;
     this.movingLight.position.y = 3 + Math.sin(this.time * 0.25) * 1.5;
 
-    if (this.autoRotate) {
+    if (this.isDragging) {
+      // Manual control
+    } else if (this.autoRotate) {
       this.targetRotationY += 0.002;
       this.targetRotationX += 0.002;
+    } else {
+      // Smooth damping
+      this.targetRotationX += this.rotationVelocity.x;
+      this.targetRotationY += this.rotationVelocity.y;
+      this.rotationVelocity.x *= 0.92;
+      this.rotationVelocity.y *= 0.92;
+      if (
+        Math.abs(this.rotationVelocity.x) < 0.0001 &&
+        Math.abs(this.rotationVelocity.y) < 0.0001
+      ) {
+        this.autoRotate = true;
+      }
     }
 
-    this.cubeGroup.rotation.y += (this.targetRotationY - this.cubeGroup.rotation.y) * 0.1;
-    this.cubeGroup.rotation.x += (this.targetRotationX - this.cubeGroup.rotation.x) * 0.1;
+    // Smooth interpolation
+    this.cubeGroup.rotation.y += (this.targetRotationY - this.cubeGroup.rotation.y) * 0.12;
+    this.cubeGroup.rotation.x += (this.targetRotationX - this.cubeGroup.rotation.x) * 0.12;
 
     this.renderer.render(this.scene, this.camera);
   }
@@ -271,7 +295,7 @@ class RubiksCube3D {
   }
 }
 
-// ✅ Matches your actual Webflow div: id="rubic-3d"
+// ✅ Matches your Webflow div
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => new RubiksCube3D('rubic-3d'));
 } else {
