@@ -31,8 +31,9 @@ class RubiksCube3D {
 
   init() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x070d15);
-    this.scene.fog = new THREE.Fog(0x070d15, 10, 25);
+    // Transparent background (no color, no fog)
+    this.scene.background = null;
+    this.scene.fog = null;
 
     const aspect = this.container.clientWidth / this.container.clientHeight;
     this.camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
@@ -42,7 +43,7 @@ class RubiksCube3D {
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
-      alpha: true,
+      alpha: true, // transparency for Webflow background
       powerPreference: 'high-performance'
     });
 
@@ -51,12 +52,15 @@ class RubiksCube3D {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.6;
+    this.renderer.toneMappingExposure = 1.5;
 
     this.setupLights();
     this.createRubiksCube();
-    const scaleFactor = Math.min(this.container.clientWidth, this.container.clientHeight) / 400;
-    this.cubeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);    
+
+    // Slightly smaller default size to prevent overflow
+    const scaleFactor = Math.min(this.container.clientWidth, this.container.clientHeight) / 480;
+    this.cubeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
     this.createGround();
     this.setupEnvironment();
 
@@ -67,42 +71,28 @@ class RubiksCube3D {
     const ambientLight = new THREE.AmbientLight(0x3d5a7a, 0.4);
     this.scene.add(ambientLight);
 
-    this.keyLight = new THREE.DirectionalLight(0xffeaa7, 2.2);
+    this.keyLight = new THREE.DirectionalLight(0xffeaa7, 2.0);
     this.keyLight.position.set(5, 6, 4);
     this.keyLight.target.position.set(0, 0, 0);
     this.keyLight.castShadow = true;
     this.scene.add(this.keyLight);
     this.scene.add(this.keyLight.target);
 
-    const fillLight = new THREE.DirectionalLight(0x74b9ff, 1.6);
+    const fillLight = new THREE.DirectionalLight(0x74b9ff, 1.4);
     fillLight.position.set(-6, 3, 3);
-    fillLight.target.position.set(0, 0, 0);
     this.scene.add(fillLight);
-    this.scene.add(fillLight.target);
 
-    const rimLight = new THREE.SpotLight(0x60a5fa, 5.2, 15, Math.PI / 4, 0.3);
+    const rimLight = new THREE.SpotLight(0x60a5fa, 4.8, 15, Math.PI / 4, 0.3);
     rimLight.position.set(-3, 4, -5);
-    rimLight.target.position.set(0, 0, 0);
     this.scene.add(rimLight);
-    this.scene.add(rimLight.target);
 
-    const accentLight1 = new THREE.PointLight(0x3b82f6, 5.0, 12);
+    const accentLight1 = new THREE.PointLight(0x3b82f6, 4.0, 10);
     accentLight1.position.set(-4, 0, 4);
     this.scene.add(accentLight1);
 
     const accentLight2 = new THREE.PointLight(0xffa726, 2.5, 10);
     accentLight2.position.set(5, 2, 3);
     this.scene.add(accentLight2);
-
-    const topLight = new THREE.PointLight(0xdfe6e9, 1.0, 12);
-    topLight.position.set(0, 8, 0);
-    this.scene.add(topLight);
-
-    const frontLight = new THREE.DirectionalLight(0xb2bec3, 0.8);
-    frontLight.position.set(0, 2, 6);
-    frontLight.target.position.set(0, 0, 0);
-    this.scene.add(frontLight);
-    this.scene.add(frontLight.target);
 
     this.movingLight = new THREE.PointLight(0x60a5fa, 2.0, 12);
     this.movingLight.position.set(4, 2, 0);
@@ -126,26 +116,21 @@ class RubiksCube3D {
       envMapIntensity: 2.2
     });
 
-    const cubeSize = 0.93;
-    const gap = 0.07;
+    const cubeSize = 0.9; // smaller cubes
+    const gap = 0.06;
     const totalSize = cubeSize + gap;
 
     for (let x = 0; x < 3; x++) {
       for (let y = 0; y < 3; y++) {
         for (let z = 0; z < 3; z++) {
           const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
-
           const material =
             (x === 1 && y === 1 && z === 1) || (x !== 1 && y !== 1 && z !== 1)
               ? darkSteelMaterial
               : steelMaterial;
 
           const cube = new THREE.Mesh(geometry, material);
-          cube.position.set(
-            (x - 1) * totalSize,
-            (y - 1) * totalSize,
-            (z - 1) * totalSize
-          );
+          cube.position.set((x - 1) * totalSize, (y - 1) * totalSize, (z - 1) * totalSize);
           cube.castShadow = true;
           cube.receiveShadow = true;
 
@@ -163,34 +148,30 @@ class RubiksCube3D {
     this.cubeGroup.rotation.set(-1, 0.7, -0.2);
     this.targetRotationX = this.cubeGroup.rotation.x;
     this.targetRotationY = this.cubeGroup.rotation.y;
-
     this.scene.add(this.cubeGroup);
   }
 
   createGround() {
+    // Remove or make ground fully transparent
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(30, 30),
-      new THREE.ShadowMaterial({ opacity: 0.4 })
+      new THREE.ShadowMaterial({ opacity: 0.0 }) // no visible ground
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -2.5;
-    ground.receiveShadow = true;
+    ground.receiveShadow = false;
     this.scene.add(ground);
   }
 
   setupEnvironment() {
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     const envScene = new THREE.Scene();
-
     const envMesh = new THREE.Mesh(
       new THREE.SphereGeometry(500, 32, 32),
-      new THREE.MeshBasicMaterial({ color: 0x1a2d42, side: THREE.BackSide })
+      new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide })
     );
-
     envScene.add(envMesh);
-
     this.scene.environment = pmrem.fromScene(envScene).texture;
-
     pmrem.dispose();
   }
 
@@ -245,9 +226,10 @@ class RubiksCube3D {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+
     if (this.cubeGroup) {
-        const scaleFactor = Math.min(w, h) / 400;
-        this.cubeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
+      const scaleFactor = Math.min(w, h) / 480;
+      this.cubeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
     }
   }
 
@@ -260,7 +242,6 @@ class RubiksCube3D {
     if (!this.isVisible) return;
 
     this.animationId = requestAnimationFrame(this.animate);
-
     this.time += 0.01;
 
     this.movingLight.position.x = Math.cos(this.time * 0.4) * 5;
@@ -272,10 +253,8 @@ class RubiksCube3D {
       this.targetRotationX += 0.002;
     }
 
-    this.cubeGroup.rotation.y +=
-      (this.targetRotationY - this.cubeGroup.rotation.y) * 0.1;
-    this.cubeGroup.rotation.x +=
-      (this.targetRotationX - this.cubeGroup.rotation.x) * 0.1;
+    this.cubeGroup.rotation.y += (this.targetRotationY - this.cubeGroup.rotation.y) * 0.1;
+    this.cubeGroup.rotation.x += (this.targetRotationX - this.cubeGroup.rotation.x) * 0.1;
 
     this.renderer.render(this.scene, this.camera);
   }
@@ -295,10 +274,10 @@ class RubiksCube3D {
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    new RubiksCube3D('rubic-3d');
+    new RubiksCube3D('services-rubic-3d');
   });
 } else {
-  new RubiksCube3D('rubic-3d');
+  new RubiksCube3D('services-rubic-3d');
 }
 
 export default RubiksCube3D;
