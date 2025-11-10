@@ -18,7 +18,7 @@ html, body {
 }
 
 /* Webflow controls height → Three.js just fills it */
-.services-canvas-wrapper {
+.services-rubic-3d {
   width: 100%;
   height: 100%;
   position: relative;
