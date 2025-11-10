@@ -4,10 +4,16 @@ class RubiksCube3D {
   constructor(containerId) {
     this.containerId = containerId;
     this.container = document.getElementById(containerId);
+
+    if (!this.container) {
+      console.error(`Container with ID "${containerId}" not found.`);
+      return;
+    }
+
     this.canvas = this.container.querySelector('#webgl-canvas');
-    
+
     if (!this.canvas) {
-      console.error('Canvas not found');
+      console.error('Canvas not found inside container.');
       return;
     }
 
@@ -15,7 +21,6 @@ class RubiksCube3D {
     this.isInitialized = false;
     this.animationId = null;
     this.time = 0;
-
     this.isDragging = false;
     this.previousMousePosition = { x: 0, y: 0 };
     this.autoRotate = true;
@@ -31,7 +36,6 @@ class RubiksCube3D {
 
   init() {
     this.scene = new THREE.Scene();
-    // Transparent background (no color, no fog)
     this.scene.background = null;
     this.scene.fog = null;
 
@@ -43,7 +47,7 @@ class RubiksCube3D {
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
-      alpha: true, // transparency for Webflow background
+      alpha: true,
       powerPreference: 'high-performance'
     });
 
@@ -57,7 +61,7 @@ class RubiksCube3D {
     this.setupLights();
     this.createRubiksCube();
 
-    // Slightly smaller default size to prevent overflow
+    // Smaller scale by default to prevent overflow
     const scaleFactor = Math.min(this.container.clientWidth, this.container.clientHeight) / 480;
     this.cubeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
@@ -73,10 +77,8 @@ class RubiksCube3D {
 
     this.keyLight = new THREE.DirectionalLight(0xffeaa7, 2.0);
     this.keyLight.position.set(5, 6, 4);
-    this.keyLight.target.position.set(0, 0, 0);
     this.keyLight.castShadow = true;
     this.scene.add(this.keyLight);
-    this.scene.add(this.keyLight.target);
 
     const fillLight = new THREE.DirectionalLight(0x74b9ff, 1.4);
     fillLight.position.set(-6, 3, 3);
@@ -116,7 +118,7 @@ class RubiksCube3D {
       envMapIntensity: 2.2
     });
 
-    const cubeSize = 0.9; // smaller cubes
+    const cubeSize = 0.9;
     const gap = 0.06;
     const totalSize = cubeSize + gap;
 
@@ -152,10 +154,10 @@ class RubiksCube3D {
   }
 
   createGround() {
-    // Remove or make ground fully transparent
+    // Ground is fully transparent
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(30, 30),
-      new THREE.ShadowMaterial({ opacity: 0.0 }) // no visible ground
+      new THREE.ShadowMaterial({ opacity: 0.0 })
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -2.5;
@@ -272,6 +274,7 @@ class RubiksCube3D {
   }
 }
 
+// Initialize after DOM is loaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     new RubiksCube3D('services-rubic-3d');
