@@ -36,7 +36,7 @@ class RubiksCube3D {
 
     const aspect = this.container.clientWidth / this.container.clientHeight;
     this.camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
-    this.camera.position.set(6, 6, 9);
+    this.camera.position.set(3, 3, 4.5);
     this.camera.lookAt(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -55,6 +55,8 @@ class RubiksCube3D {
 
     this.setupLights();
     this.createRubiksCube();
+    const scaleFactor = Math.min(this.container.clientWidth, this.container.clientHeight) / 400;
+    this.cubeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);    
     this.createGround();
     this.setupEnvironment();
 
@@ -243,6 +245,10 @@ class RubiksCube3D {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+    if (this.cubeGroup) {
+        const scaleFactor = Math.min(w, h) / 400;
+        this.cubeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    }
   }
 
   handleVisibilityChange() {
